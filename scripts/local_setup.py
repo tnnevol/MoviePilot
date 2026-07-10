@@ -2743,6 +2743,7 @@ def install_browser_runtime(venv_python: Path) -> None:
     """
     print_step("安装 CloakBrowser 浏览器内核")
     run([str(venv_python), "-m", "cloakbrowser", "install"])
+    print_step("CloakBrowser 安装完成")
 
 
 def _startup_platform_name() -> str:
