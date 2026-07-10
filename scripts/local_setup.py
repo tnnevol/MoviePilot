@@ -773,7 +773,7 @@ def _download_to_stdout(url: str) -> str:
         "-H",
         "Accept: application/vnd.github+json",
         "-H",
-        "User-Agent: MoviePilot-CLI",
+        "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
     ]
     if command_exists("curl"):
         return capture(["curl", "-fsSL", *headers, url])
@@ -783,7 +783,7 @@ def _download_to_stdout(url: str) -> str:
                 "wget",
                 "-qO-",
                 "--header=Accept: application/vnd.github+json",
-                "--header=User-Agent: MoviePilot-CLI",
+                "--header=User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
                 url,
             ]
         )
