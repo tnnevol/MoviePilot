@@ -778,6 +778,7 @@ def ensure_api_token(force_token: bool = False, token: Optional[str] = None) -> 
 
 
 def _download_to_stdout(url: str) -> str:
+    print(f"==> User-Agent: {DEFAULT_USER_AGENT}")
     headers = [
         "-H",
         "Accept: application/vnd.github+json",
