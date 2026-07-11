@@ -46,7 +46,7 @@ COOKIE_DIR = CONFIG_DIR / "cookies"
 ENV_FILE = CONFIG_DIR / "app.env"
 
 DEFAULT_NODE_VERSION = "20.12.1"
-DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Debian; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.6823.63 Safari/537.36"
 FRONTEND_LATEST_API = (
     "https://api.github.com/repos/jxxghp/MoviePilot-Frontend/releases/latest"
 )
