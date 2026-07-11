@@ -46,6 +46,7 @@ COOKIE_DIR = CONFIG_DIR / "cookies"
 ENV_FILE = CONFIG_DIR / "app.env"
 
 DEFAULT_NODE_VERSION = "20.12.1"
+DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
 FRONTEND_LATEST_API = (
     "https://api.github.com/repos/jxxghp/MoviePilot-Frontend/releases/latest"
 )
@@ -143,10 +144,13 @@ def _repo_frontend_version() -> str:
 
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    frontend_version = str(getattr(module, "FRONTEND_VERSION", "") or "").strip()
+    frontend_version = str(
+        getattr(module, "FRONTEND_VERSION", "") or "").strip()
     if not frontend_version:
         raise RuntimeError(f"版本文件未定义有效的 FRONTEND_VERSION：{version_file}")
     return frontend_version
+
+
 LOCAL_FRONTEND_SERVICE_SCRIPT = textwrap.dedent(
     """
     const http = require('node:http')
@@ -352,7 +356,8 @@ def _default_config_dir() -> Path:
     if platform.system() == "Darwin":
         return Path.home() / "Library" / "Application Support" / "MoviePilot"
     return (
-        Path(os.getenv("XDG_CONFIG_HOME") or (Path.home() / ".config")) / "moviepilot"
+        Path(os.getenv("XDG_CONFIG_HOME") or (
+            Path.home() / ".config")) / "moviepilot"
     )
 
 
@@ -521,7 +526,8 @@ def redact_command(command: list[str]) -> list[str]:
 
 def build_package_install_env() -> dict[str, str]:
     env = os.environ.copy()
-    package_cache_root = env.get("PACKAGE_CACHE_ROOT", "").strip() or str(CONFIG_DIR / ".cache")
+    package_cache_root = env.get(
+        "PACKAGE_CACHE_ROOT", "").strip() or str(CONFIG_DIR / ".cache")
     env.setdefault("PACKAGE_CACHE_ROOT", package_cache_root)
     env.setdefault("PIP_CACHE_DIR", os.path.join(package_cache_root, "pip"))
     env.setdefault("UV_CACHE_DIR", os.path.join(package_cache_root, "uv"))
@@ -589,7 +595,8 @@ def discover_supported_python() -> Optional[str]:
         seen.add(candidate)
 
         python_path = (
-            candidate if os.sep in candidate else (shutil.which(candidate) or "")
+            candidate if os.sep in candidate else (
+                shutil.which(candidate) or "")
         )
         if not python_path:
             continue
@@ -643,8 +650,10 @@ def _ensure_uv_available_for_venv(venv_dir: Path, venv_python: Path) -> Optional
         return uv_bin
 
     print_step("当前未检测到 uv，先在虚拟环境内安装 uv")
-    command = [str(venv_python), "-m", "pip", "install", "--upgrade", "pip", "uv"]
-    run(command, env=build_package_install_env(), safe_command=redact_command(command))
+    command = [str(venv_python), "-m", "pip",
+               "install", "--upgrade", "pip", "uv"]
+    run(command, env=build_package_install_env(),
+        safe_command=redact_command(command))
     if uv_bin.exists():
         return uv_bin
     raise RuntimeError("uv 安装完成，但虚拟环境中未找到 uv 可执行文件")
@@ -773,7 +782,7 @@ def _download_to_stdout(url: str) -> str:
         "-H",
         "Accept: application/vnd.github+json",
         "-H",
-        "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+        f"User-Agent: {DEFAULT_USER_AGENT}",
     ]
     if command_exists("curl"):
         return capture(["curl", "-fsSL", *headers, url])
@@ -783,7 +792,7 @@ def _download_to_stdout(url: str) -> str:
                 "wget",
                 "-qO-",
                 "--header=Accept: application/vnd.github+json",
-                "--header=User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+                f"--header=User-Agent: {USER_AGENT}",
                 url,
             ]
         )
@@ -842,7 +851,8 @@ def _remove_path(path: Path) -> None:
 
 
 def _resolve_frontend_release(frontend_version: str) -> tuple[str, str]:
-    frontend_version = (frontend_version or "").strip() or _repo_frontend_version()
+    frontend_version = (frontend_version or "").strip(
+    ) or _repo_frontend_version()
     if frontend_version == "latest":
         release = fetch_json(FRONTEND_LATEST_API)
     else:
@@ -934,7 +944,8 @@ def install_node_runtime(node_version: str) -> Path:
         extract_dir = temp_path / "extract"
         download_file(download_url, archive_path)
         extract_archive(archive_path, extract_dir)
-        extracted_roots = [item for item in extract_dir.iterdir() if item.is_dir()]
+        extracted_roots = [
+            item for item in extract_dir.iterdir() if item.is_dir()]
         if not extracted_roots:
             raise RuntimeError("Node 运行时解压失败")
         _remove_path(NODE_DIR)
@@ -1189,7 +1200,8 @@ def _prompt_text(
     secret: bool = False,
 ) -> str:
     while True:
-        suffix = f" [{default}]" if default not in (None, "") and not secret else ""
+        suffix = f" [{default}]" if default not in (
+            None, "") and not secret else ""
         prompt = f"{label}{suffix}: "
         value = getpass.getpass(prompt) if secret else input(prompt)
         value = value.strip()
@@ -1298,7 +1310,8 @@ def _load_llm_provider_module():
 
 def _load_llm_provider_definitions_inner() -> list[dict[str, Any]]:
     provider_module = _load_llm_provider_module()
-    providers = asyncio.run(provider_module.LLMProviderManager().list_providers_async())
+    providers = asyncio.run(
+        provider_module.LLMProviderManager().list_providers_async())
     return providers if isinstance(providers, list) else []
 
 
@@ -1373,18 +1386,21 @@ def _llm_provider_defaults(
         None,
     )
     if isinstance(provider_meta, dict):
-        default_base_url = str(provider_meta.get("default_base_url") or "").strip()
+        default_base_url = str(provider_meta.get(
+            "default_base_url") or "").strip()
         if default_base_url:
             defaults["base_url"] = default_base_url
         base_url_presets = provider_meta.get("base_url_presets") or []
         if isinstance(base_url_presets, list) and base_url_presets:
-            preset_id = str((base_url_presets[0] or {}).get("id") or "").strip()
+            preset_id = str(
+                (base_url_presets[0] or {}).get("id") or "").strip()
             if preset_id:
                 defaults["base_url_preset"] = preset_id
 
     defaults.setdefault("model", _env_default("LLM_MODEL", ""))
     defaults.setdefault("base_url", _env_default("LLM_BASE_URL", ""))
-    defaults.setdefault("base_url_preset", _env_default("LLM_BASE_URL_PRESET", ""))
+    defaults.setdefault("base_url_preset", _env_default(
+        "LLM_BASE_URL_PRESET", ""))
     return defaults
 
 
@@ -1509,7 +1525,8 @@ def _print_llm_models(models: list[dict[str, Any]], limit: int = 20) -> None:
 
 
 def _prompt_model_choice(models: list[dict[str, Any]], default: Optional[str] = None) -> str:
-    valid_models = [item for item in models if isinstance(item, dict) and item.get("id")]
+    valid_models = [item for item in models if isinstance(
+        item, dict) and item.get("id")]
     if not valid_models:
         return _prompt_text("LLM 模型名称", default=default)
 
@@ -1782,9 +1799,12 @@ def _collect_downloader_config() -> Optional[dict[str, Any]]:
     config_name = _prompt_text("下载器名称", default=downloader_type)
     if downloader_type == "qbittorrent":
         host = _prompt_text("qBittorrent 地址", default="http://127.0.0.1:8080")
-        apikey = _prompt_text("qBittorrent API Key（可选，5.2+ 推荐）", allow_empty=True, default="")
-        username = _prompt_text("qBittorrent 用户名", default="admin") if not apikey else ""
-        password = _prompt_text("qBittorrent 密码", secret=True, allow_empty=bool(apikey)) if not apikey else ""
+        apikey = _prompt_text(
+            "qBittorrent API Key（可选，5.2+ 推荐）", allow_empty=True, default="")
+        username = _prompt_text(
+            "qBittorrent 用户名", default="admin") if not apikey else ""
+        password = _prompt_text(
+            "qBittorrent 密码", secret=True, allow_empty=bool(apikey)) if not apikey else ""
         category = _prompt_yes_no("是否启用 qBittorrent 分类", default=False)
         return {
             "name": config_name,
@@ -1925,13 +1945,17 @@ def _collect_notification_config() -> Optional[dict[str, Any]]:
             "FEISHU_APP_ID": _prompt_text("飞书应用 App ID"),
             "FEISHU_APP_SECRET": _prompt_text("飞书应用 App Secret", secret=True),
         }
-        open_id = _prompt_text("默认接收用户 Open ID（可选）", default="", allow_empty=True)
-        chat_id = _prompt_text("默认接收群聊 Chat ID（可选）", default="", allow_empty=True)
+        open_id = _prompt_text("默认接收用户 Open ID（可选）",
+                               default="", allow_empty=True)
+        chat_id = _prompt_text("默认接收群聊 Chat ID（可选）",
+                               default="", allow_empty=True)
         admins = _prompt_text(
             "管理员 Open ID 列表，多个逗号分隔（可选）", default="", allow_empty=True
         )
-        verification_token = _prompt_text("飞书事件 Verification Token（可选）", default="", allow_empty=True)
-        encrypt_key = _prompt_text("飞书事件 Encrypt Key（可选）", default="", allow_empty=True)
+        verification_token = _prompt_text(
+            "飞书事件 Verification Token（可选）", default="", allow_empty=True)
+        encrypt_key = _prompt_text(
+            "飞书事件 Encrypt Key（可选）", default="", allow_empty=True)
         if open_id:
             config["FEISHU_OPEN_ID"] = open_id
         if chat_id:
@@ -1974,7 +1998,8 @@ def _collect_agent_config(
             "AI_AGENT_GLOBAL": False,
         }
 
-    provider_definitions = _load_llm_provider_definitions(runtime_python=runtime_python)
+    provider_definitions = _load_llm_provider_definitions(
+        runtime_python=runtime_python)
     provider_choices = _llm_provider_choice_map(provider_definitions)
     current_provider = _env_default("LLM_PROVIDER", "deepseek").lower()
     if current_provider not in provider_choices:
@@ -2001,7 +2026,8 @@ def _collect_agent_config(
     current_base_url_preset = _env_default(
         "LLM_BASE_URL_PRESET", defaults.get("base_url_preset", "")
     )
-    api_key_label = str(provider_meta.get("api_key_label") or "API Key").strip() or "API Key"
+    api_key_label = str(provider_meta.get("api_key_label")
+                        or "API Key").strip() or "API Key"
     api_key_hint = str(provider_meta.get("api_key_hint") or "").strip()
     requires_base_url = bool(provider_meta.get("requires_base_url"))
     base_url_label = (
@@ -2066,7 +2092,8 @@ def _collect_agent_config(
             if not default_preset or default_preset not in {
                 str(item.get("id") or "").strip() for item in duplicate_value_presets
             }:
-                default_preset = str((duplicate_value_presets[0] or {}).get("id") or "").strip()
+                default_preset = str(
+                    (duplicate_value_presets[0] or {}).get("id") or "").strip()
             for item in duplicate_value_presets:
                 preset_id = str(item.get("id") or "").strip()
                 preset_label = str(item.get("label") or preset_id).strip()
@@ -2288,7 +2315,8 @@ def run_setup_wizard(
                     "请输入 API_TOKEN（至少 16 位）", secret=True
                 )
                 if len(custom_token) >= 16:
-                    api_token = ensure_api_token(force_token=True, token=custom_token)
+                    api_token = ensure_api_token(
+                        force_token=True, token=custom_token)
                     break
                 print("API_TOKEN 长度不能少于 16 个字符。")
 
@@ -2330,7 +2358,8 @@ def _merge_directory_item(existing_items: list[dict], new_item: dict) -> list[di
             and item.get("library_path") == new_item.get("library_path")
         ):
             new_copy = dict(new_item)
-            new_copy["priority"] = item.get("priority", new_item.get("priority", 0))
+            new_copy["priority"] = item.get(
+                "priority", new_item.get("priority", 0))
             merged[index] = new_copy
             return merged
 
@@ -2399,15 +2428,19 @@ def _apply_local_system_config_inner(config_payload: dict[str, Any]) -> None:
     system_config = SystemConfigOper()
     directory_items = config_payload.get("directories") or []
     if directory_items:
-        current_directories = system_config.get(SystemConfigKey.Directories) or []
+        current_directories = system_config.get(
+            SystemConfigKey.Directories) or []
         for item in directory_items:
-            current_directories = _merge_directory_item(current_directories, item)
+            current_directories = _merge_directory_item(
+                current_directories, item)
         system_config.set(SystemConfigKey.Directories, current_directories)
 
     downloader_item = config_payload.get("downloader")
     if downloader_item:
-        current_downloaders = system_config.get(SystemConfigKey.Downloaders) or []
-        current_downloaders = _merge_named_item(current_downloaders, downloader_item)
+        current_downloaders = system_config.get(
+            SystemConfigKey.Downloaders) or []
+        current_downloaders = _merge_named_item(
+            current_downloaders, downloader_item)
         system_config.set(SystemConfigKey.Downloaders, current_downloaders)
 
     mediaserver_item = config_payload.get("mediaserver")
@@ -2418,12 +2451,14 @@ def _apply_local_system_config_inner(config_payload: dict[str, Any]) -> None:
 
     notification_item = config_payload.get("notification")
     if notification_item:
-        current_notifications = system_config.get(SystemConfigKey.Notifications) or []
+        current_notifications = system_config.get(
+            SystemConfigKey.Notifications) or []
         current_notifications = _merge_named_item(
             current_notifications, notification_item
         )
         system_config.set(SystemConfigKey.Notifications, current_notifications)
-        current_switches = system_config.get(SystemConfigKey.NotificationSwitchs) or []
+        current_switches = system_config.get(
+            SystemConfigKey.NotificationSwitchs) or []
         system_config.set(
             SystemConfigKey.NotificationSwitchs,
             _merge_notification_switches(current_switches),
@@ -2665,7 +2700,8 @@ def init_local(
             force_token=force_token,
             runtime_python=runtime_python,
             preset_superuser=direct_env_settings.get("SUPERUSER"),
-            preset_superuser_password=direct_env_settings.get("SUPERUSER_PASSWORD"),
+            preset_superuser_password=direct_env_settings.get(
+                "SUPERUSER_PASSWORD"),
         )
     else:
         ensure_api_token(force_token=force_token)
@@ -2683,10 +2719,12 @@ def init_local(
         else:
             print_step("已跳过资源初始化")
     else:
-        install_resources(resources_repo=resources_repo, resource_dir=resource_dir)
+        install_resources(resources_repo=resources_repo,
+                          resource_dir=resource_dir)
 
     if wizard_payload:
-        apply_local_system_config(wizard_payload, runtime_python=runtime_python)
+        apply_local_system_config(
+            wizard_payload, runtime_python=runtime_python)
     elif direct_env_settings:
         sync_superuser_account(runtime_python=runtime_python)
 
@@ -2724,15 +2762,18 @@ def install_deps(*, python_bin: str, venv_dir: Path, recreate: bool) -> Path:
 
     if os.name == "nt":
         print_step("升级 pip")
-        command = [str(venv_python), "-m", "pip", "install", "--upgrade", "pip"]
-        run(command, env=build_package_install_env(), safe_command=redact_command(command))
+        command = [str(venv_python), "-m", "pip",
+                   "install", "--upgrade", "pip"]
+        run(command, env=build_package_install_env(),
+            safe_command=redact_command(command))
     else:
         print_step("为虚拟环境配置 uv 兼容 pip 命令")
         venv_pip = configure_venv_pip_compat(venv_dir, venv_python)
 
     print_step("安装项目依赖")
     command = [str(venv_pip), "install", "-r", str(ROOT / "requirements.txt")]
-    run(command, env=build_package_install_env(), safe_command=redact_command(command))
+    run(command, env=build_package_install_env(),
+        safe_command=redact_command(command))
     install_browser_runtime(venv_python)
     return venv_python
 
@@ -2925,7 +2966,8 @@ def _run_optional_command(command: list[str]) -> subprocess.CompletedProcess[str
 
 
 def _last_command_line(result: subprocess.CompletedProcess[str]) -> str:
-    lines = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
+    lines = [line.strip()
+             for line in (result.stdout or "").splitlines() if line.strip()]
     return lines[-1] if lines else "命令未返回更多信息"
 
 
@@ -2990,7 +3032,8 @@ def _autostart_status() -> dict[str, Any]:
 
 
 def _enable_autostart_macos(config_dir: Path, python_bin: Path) -> dict[str, Any]:
-    launcher = _write_unix_startup_launcher(config_dir=config_dir, python_bin=python_bin)
+    launcher = _write_unix_startup_launcher(
+        config_dir=config_dir, python_bin=python_bin)
     agent_path = _macos_launch_agent_path()
     agent_path.parent.mkdir(parents=True, exist_ok=True)
     LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -3023,7 +3066,8 @@ def _enable_autostart_macos(config_dir: Path, python_bin: Path) -> dict[str, Any
     agent_path.write_text(plist_content, encoding="utf-8")
 
     uid = str(os.getuid())
-    _run_optional_command(["launchctl", "bootout", f"gui/{uid}", str(agent_path)])
+    _run_optional_command(
+        ["launchctl", "bootout", f"gui/{uid}", str(agent_path)])
     bootstrap_result = _run_optional_command(
         ["launchctl", "bootstrap", f"gui/{uid}", str(agent_path)]
     )
@@ -3054,7 +3098,8 @@ def _enable_autostart_linux_systemd(
     if not systemctl_bin:
         return None
 
-    launcher = _write_unix_startup_launcher(config_dir=config_dir, python_bin=python_bin)
+    launcher = _write_unix_startup_launcher(
+        config_dir=config_dir, python_bin=python_bin)
     unit_path = _linux_systemd_unit_path()
     unit_path.parent.mkdir(parents=True, exist_ok=True)
     unit_content = textwrap.dedent(
@@ -3108,7 +3153,8 @@ def _enable_autostart_linux_systemd(
 
 
 def _enable_autostart_linux_xdg(config_dir: Path, python_bin: Path) -> dict[str, Any]:
-    launcher = _write_unix_startup_launcher(config_dir=config_dir, python_bin=python_bin)
+    launcher = _write_unix_startup_launcher(
+        config_dir=config_dir, python_bin=python_bin)
     desktop_path = _linux_xdg_autostart_path()
     desktop_path.parent.mkdir(parents=True, exist_ok=True)
     unit_path = _linux_systemd_unit_path()
@@ -3140,7 +3186,8 @@ def _enable_autostart_linux_xdg(config_dir: Path, python_bin: Path) -> dict[str,
 
 
 def _enable_autostart_windows(config_dir: Path, python_bin: Path) -> dict[str, Any]:
-    launcher = _write_windows_startup_launcher(config_dir=config_dir, python_bin=python_bin)
+    launcher = _write_windows_startup_launcher(
+        config_dir=config_dir, python_bin=python_bin)
     startup_path = _windows_startup_path()
     startup_path.parent.mkdir(parents=True, exist_ok=True)
     startup_content = textwrap.dedent(
@@ -3184,7 +3231,8 @@ def disable_autostart() -> dict[str, Any]:
     if system_name == "Darwin":
         agent_path = _macos_launch_agent_path()
         uid = str(os.getuid())
-        _run_optional_command(["launchctl", "bootout", f"gui/{uid}", str(agent_path)])
+        _run_optional_command(
+            ["launchctl", "bootout", f"gui/{uid}", str(agent_path)])
         if agent_path.exists():
             _remove_path(agent_path)
             removed_paths.append(agent_path)
@@ -3291,7 +3339,8 @@ def _services_running() -> list[str]:
         if not _pid_exists(pid_int):
             continue
 
-        runtime_start_time = payload.get("create_time") if isinstance(payload, dict) else None
+        runtime_start_time = payload.get(
+            "create_time") if isinstance(payload, dict) else None
         process_start_time = _read_process_start_time(pid_int)
         if runtime_start_time is not None and process_start_time is not None:
             try:
@@ -3319,7 +3368,8 @@ def _stop_managed_services(venv_dir: Path) -> None:
     if venv_python.exists():
         print_step("停止本地前后端服务")
         run(
-            [str(venv_python), "-m", "app.cli", "stop", "--timeout", "30", "--force"],
+            [str(venv_python), "-m", "app.cli",
+             "stop", "--timeout", "30", "--force"],
             cwd=ROOT,
         )
         return
@@ -3491,7 +3541,8 @@ def uninstall_local(
 
     removed_paths: list[Path] = []
     removed_paths.extend(
-        _remove_cli_symlinks(command_path=command_path, launch_path=launch_path)
+        _remove_cli_symlinks(command_path=command_path,
+                             launch_path=launch_path)
     )
     removed_paths.extend(_remove_runtime_state_files())
     removed_paths.extend(_remove_installed_resource_files())
@@ -3663,6 +3714,10 @@ def run_agent_request(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="MoviePilot 本地安装与初始化工具")
+    parser.add_argument(
+        "--user-agent",
+        help="GitHub API 请求的 User-Agent，不指定则使用浏览器 UA 兜底",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     install_parser = subparsers.add_parser(
@@ -3702,7 +3757,8 @@ def build_parser() -> argparse.ArgumentParser:
     resources_parser.add_argument(
         "--resources-repo", help="本地 MoviePilot-Resources 仓库路径"
     )
-    resources_parser.add_argument("--resource-dir", help="直接指定 resources.v2 目录")
+    resources_parser.add_argument(
+        "--resource-dir", help="直接指定 resources.v2 目录")
     resources_parser.add_argument(
         "--config-dir", help="配置目录，默认使用程序目录外的系统配置目录"
     )
@@ -3735,7 +3791,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_BOOTSTRAP_PYTHON,
         help="用于创建虚拟环境的 Python 解释器，默认自动选择本地 3.11+ 版本",
     )
-    setup_parser.add_argument("--venv", default=str(ROOT / "venv"), help="虚拟环境目录")
+    setup_parser.add_argument(
+        "--venv", default=str(ROOT / "venv"), help="虚拟环境目录")
     setup_parser.add_argument(
         "--recreate", action="store_true", help="删除并重建虚拟环境"
     )
@@ -3833,7 +3890,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--config-dir", help="配置目录，默认使用当前安装配置"
     )
 
-    apply_config_parser = subparsers.add_parser("apply-config", help=argparse.SUPPRESS)
+    apply_config_parser = subparsers.add_parser(
+        "apply-config", help=argparse.SUPPRESS)
     apply_config_parser.add_argument(
         "--config-json-file", required=True, help=argparse.SUPPRESS
     )
@@ -3873,6 +3931,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+
+    # 将 CLI 传入的 User-Agent 写入全局变量，供 _download_to_stdout 使用
+    if getattr(args, "user_agent", None):
+        global DEFAULT_USER_AGENT
+        DEFAULT_USER_AGENT = args.user_agent
+
     explicit_config_dir = (
         Path(args.config_dir) if getattr(args, "config_dir", None) else None
     )
@@ -3917,7 +3981,8 @@ def main() -> int:
                 resources_repo=Path(args.resources_repo)
                 if args.resources_repo
                 else None,
-                resource_dir=Path(args.resource_dir) if args.resource_dir else None,
+                resource_dir=Path(
+                    args.resource_dir) if args.resource_dir else None,
             )
             return 0
 
@@ -3926,7 +3991,8 @@ def main() -> int:
                 resources_repo=Path(args.resources_repo)
                 if args.resources_repo
                 else None,
-                resource_dir=Path(args.resource_dir) if args.resource_dir else None,
+                resource_dir=Path(
+                    args.resource_dir) if args.resource_dir else None,
                 skip_resources=args.skip_resources,
                 resources_ready=False,
                 force_token=args.force_token,
@@ -3955,14 +4021,16 @@ def main() -> int:
                     resources_repo=Path(args.resources_repo)
                     if args.resources_repo
                     else None,
-                    resource_dir=Path(args.resource_dir) if args.resource_dir else None,
+                    resource_dir=Path(
+                        args.resource_dir) if args.resource_dir else None,
                 )
                 resources_installed = True
             init_local(
                 resources_repo=Path(args.resources_repo)
                 if args.resources_repo
                 else None,
-                resource_dir=Path(args.resource_dir) if args.resource_dir else None,
+                resource_dir=Path(
+                    args.resource_dir) if args.resource_dir else None,
                 skip_resources=args.skip_resources or resources_installed,
                 resources_ready=resources_installed,
                 force_token=args.force_token,
@@ -4062,7 +4130,8 @@ def main() -> int:
             return 0
 
         if args.command == "query-llm-models":
-            payload = json.loads(Path(args.request_json_file).read_text(encoding="utf-8"))
+            payload = json.loads(
+                Path(args.request_json_file).read_text(encoding="utf-8"))
             if not isinstance(payload, dict):
                 raise RuntimeError("模型查询负载格式错误")
             models = _load_llm_models_inner(payload)
