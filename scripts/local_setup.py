@@ -3714,10 +3714,6 @@ def run_agent_request(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="MoviePilot 本地安装与初始化工具")
-    parser.add_argument(
-        "--user-agent",
-        help="GitHub API 请求的 User-Agent，不指定则使用浏览器 UA 兜底",
-    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     install_parser = subparsers.add_parser(
@@ -3819,6 +3815,10 @@ def build_parser() -> argparse.ArgumentParser:
     setup_parser.add_argument("--superuser-password", help="预设超级管理员密码")
     setup_parser.add_argument(
         "--config-dir", help="配置目录，默认使用程序目录外的系统配置目录"
+    )
+    setup_parser.add_argument(
+        "--user-agent",
+        help="GitHub API 请求的 User-Agent，不指定则使用浏览器 UA 兜底",
     )
 
     uninstall_parser = subparsers.add_parser(
