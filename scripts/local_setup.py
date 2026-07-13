@@ -2782,10 +2782,25 @@ def install_deps(*, python_bin: str, venv_dir: Path, recreate: bool) -> Path:
 def install_browser_runtime(venv_python: Path) -> None:
     """
     预下载 CloakBrowser 浏览器内核，避免首次仿真登录时才拉取大文件。
+    如果检测到已安装，则跳过下载。
     """
+    if is_cloakbrowser_installed():
+        print_step("CloakBrowser 浏览器内核已安装，跳过下载")
+        return
     print_step("安装 CloakBrowser 浏览器内核")
     run([str(venv_python), "-m", "cloakbrowser", "install"])
     print_step("CloakBrowser 安装完成")
+
+
+def is_cloakbrowser_installed() -> bool:
+    """
+    检测 CloakBrowser 浏览器内核是否已安装。
+    检查 ~/.cloakbrowser/ 下是否存在 chromium-<版本号> 目录。
+    """
+    cloak_dir = Path.home() / ".cloakbrowser"
+    if not cloak_dir.is_dir():
+        return False
+    return any(cloak_dir.glob("chromium-*"))
 
 
 def _startup_platform_name() -> str:
