@@ -1,0 +1,60 @@
+# 每两小时自动同步上游仓库 jxxghp/MoviePilot 的 v2 分支
+name: Sync Upstream
+
+on:
+  schedule:
+    # 每 2 小时执行一次（UTC 时间）
+    - cron: "0 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: v2
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/jxxghp/MoviePilot.git || true
+          git fetch upstream v2
+
+      - name: Merge upstream/v2 into v2
+        id: merge
+        run: |
+          # 统计 upstream 相比当前分支领先的提交数
+          BEHIND=$(git rev-list --count HEAD..upstream/v2)
+          echo "behind=$BEHIND" >> "$GITHUB_OUTPUT"
+
+          if [ "$BEHIND" -eq 0 ]; then
+            echo "Already up to date, skipping merge."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Upstream is $BEHIND commits ahead, merging..."
+            git merge upstream/v2 --no-edit -m "chore: sync upstream v2 (auto)"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push to origin
+        if: steps.merge.outputs.changed == 'true'
+        run: git push origin v2
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.merge.outputs.changed }}" = "true" ]; then
+            echo "✅ 同步完成，合并了 ${{ steps.merge.outputs.behind }} 个提交" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⏭️ 无需同步，分支已是最新" >> "$GITHUB_STEP_SUMMARY"
+          fi
