@@ -45,7 +45,7 @@ TEMP_DIR = CONFIG_DIR / "temp"
 COOKIE_DIR = CONFIG_DIR / "cookies"
 ENV_FILE = CONFIG_DIR / "app.env"
 
-DEFAULT_NODE_VERSION = "20.12.1"
+DEFAULT_NODE_VERSION = "20.20.0"
 DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Debian; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.6823.63 Safari/537.36"
 FRONTEND_LATEST_API = (
     "https://api.github.com/repos/jxxghp/MoviePilot-Frontend/releases/latest"
@@ -902,9 +902,9 @@ def _node_platform() -> tuple[str, str]:
             return "darwin-x64", "tar.gz"
     elif system_name == "linux":
         if machine in {"aarch64", "arm64"}:
-            return "linux-arm64", "tar.xz"
+            return "linux-arm64", "tar.gz"
         if machine in {"x86_64", "amd64"}:
-            return "linux-x64", "tar.xz"
+            return "linux-x64", "tar.gz"
 
     raise RuntimeError(
         f"当前系统暂不支持自动安装本地 Node 运行时：{platform.system()} / {platform.machine()}"
