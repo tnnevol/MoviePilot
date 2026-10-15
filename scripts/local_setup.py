@@ -45,7 +45,13 @@ TEMP_DIR = CONFIG_DIR / "temp"
 COOKIE_DIR = CONFIG_DIR / "cookies"
 ENV_FILE = CONFIG_DIR / "app.env"
 
-DEFAULT_NODE_VERSION = "20.12.1"
+DEFAULT_NODE_VERSION = "20.20.0"
+# GitHub API 会拒绝不带 User-Agent 的请求，这里默认用浏览器 UA 兜底，
+# 也可通过 setup --user-agent 覆盖，避免 GitHub 侧按脚本流量降级。
+DEFAULT_USER_AGENT = (
+    "Mozilla/5.0 (X11; Debian; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/133.0.6823.63 Safari/537.36"
+)
 FRONTEND_LATEST_API = (
     "https://api.github.com/repos/jxxghp/MoviePilot-Frontend/releases/latest"
 )
@@ -763,7 +769,7 @@ def _download_to_stdout(url: str) -> str:
         "-H",
         "Accept: application/vnd.github+json",
         "-H",
-        "User-Agent: MoviePilot-CLI",
+        f"User-Agent: {DEFAULT_USER_AGENT}",
     ]
     if command_exists("curl"):
         return capture(["curl", "-fsSL", *headers, url])
@@ -773,7 +779,7 @@ def _download_to_stdout(url: str) -> str:
                 "wget",
                 "-qO-",
                 "--header=Accept: application/vnd.github+json",
-                "--header=User-Agent: MoviePilot-CLI",
+                f"--header=User-Agent: {DEFAULT_USER_AGENT}",
                 url,
             ]
         )
@@ -881,9 +887,9 @@ def _node_platform() -> tuple[str, str]:
             return "darwin-x64", "tar.gz"
     elif system_name == "linux":
         if machine in {"aarch64", "arm64"}:
-            return "linux-arm64", "tar.xz"
+            return "linux-arm64", "tar.gz"
         if machine in {"x86_64", "amd64"}:
-            return "linux-x64", "tar.xz"
+            return "linux-x64", "tar.gz"
 
     raise RuntimeError(
         f"当前系统暂不支持自动安装本地 Node 运行时：{platform.system()} / {platform.machine()}"
@@ -2994,9 +3000,25 @@ def install_cjk(venv_python: Path, *, required: bool = True, check: bool = False
 def install_browser_runtime(venv_python: Path) -> None:
     """
     预下载 CloakBrowser 浏览器内核，避免首次仿真登录时才拉取大文件。
+    如果检测到已安装，则跳过下载。
     """
+    if is_cloakbrowser_installed():
+        print_step("CloakBrowser 浏览器内核已安装，跳过下载")
+        return
     print_step("安装 CloakBrowser 浏览器内核")
     run([str(venv_python), "-m", "cloakbrowser", "install"])
+
+
+def is_cloakbrowser_installed() -> bool:
+    """
+    检测 CloakBrowser 浏览器内核是否已安装。
+
+    检查 ~/.cloakbrowser/ 下是否存在 chromium-<版本号> 目录。
+    """
+    cloak_dir = Path.home() / ".cloakbrowser"
+    if not cloak_dir.is_dir():
+        return False
+    return any(cloak_dir.glob("chromium-*"))
 
 
 def _startup_platform_name() -> str:
@@ -4085,6 +4107,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-resources", action="store_true", help="只初始化配置，不同步资源文件"
     )
     setup_parser.add_argument(
+        "--user-agent",
+        help="GitHub API 请求的 User-Agent，不指定则使用浏览器 UA 兜底",
+    )
+    setup_parser.add_argument(
         "--force-token", action="store_true", help="强制重置 API_TOKEN"
     )
     setup_parser.add_argument(
@@ -4219,6 +4245,12 @@ def main() -> int:
     """按选定配置目录执行本地管理命令并返回退出码。"""
     parser = build_parser()
     args = parser.parse_args()
+
+    # 将 CLI 传入的 User-Agent 写入全局变量，供 _download_to_stdout 使用
+    global DEFAULT_USER_AGENT
+    if getattr(args, "user_agent", None):
+        DEFAULT_USER_AGENT = args.user_agent
+
     explicit_config_dir = (
         Path(args.config_dir) if getattr(args, "config_dir", None) else None
     )
