@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
-from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from pydantic import Field
 from sqlalchemy import create_engine, select
@@ -18,7 +18,10 @@ from app.agent import orchestrator
 from app.agent.api.executor import MoviePilotApiExecutor
 from app.agent.middleware import config as config_middleware
 from app.agent.middleware import subagents
-from app.agent.middleware.summarization import FinalRequestCompactionMiddleware
+from app.agent.middleware.summarization import (
+    ContextPreservingSummarizationMiddleware,
+    FinalRequestCompactionMiddleware,
+)
 from app.agent.terminal.ownership import TerminalScope, bind_terminal_scope, close_terminal_scope
 from app.db.adapters.invocation import TransactionalInvocationRepository
 from app.db.models.agentinvocation import AgentInvocation
@@ -41,6 +44,11 @@ class _ScriptModel(FakeMessagesListChatModel):
     async def _agenerate(self, messages: list[Any], stop=None, run_manager=None, **kwargs: Any) -> Any:
         """记录包含生产系统提示词和中间件动态上下文的最终请求。"""
         self.requests.append(messages)
+        if run_manager is not None and run_manager.metadata.get("lc_source") == "summarization":
+            # 真实压缩会复用模型；摘要请求不能消耗下一条业务脚本响应。
+            return ChatResult(generations=[ChatGeneration(message=AIMessage(
+                content="脚本摘要：保留原任务的范围、分页边界和输出格式，依据已取得的回执继续完成任务。",
+            ))])
         return await super()._agenerate(messages, stop=stop, run_manager=run_manager, **kwargs)
 
 
@@ -87,7 +95,13 @@ class _TerminalSharingModel(FakeMessagesListChatModel):
         """根据当前图是否为静默子代理，生成下一次真实工具调用或最终 JSON。"""
         del stop, run_manager
         system_text = " ".join(cls._text(message) for message in messages if message.type == "system")
-        latest = messages[-1] if messages else None
+        terminal_results = [
+            json.loads(cls._text(message))
+            for message in messages
+            if isinstance(message, ToolMessage) and message.name == "execute_command"
+        ]
+        latest_terminal = terminal_results[-1] if terminal_results else {}
+        terminal_output = "".join(result.get("output", "") for result in terminal_results)
         delegated = any(
             isinstance(message, AIMessage)
             and any(call.get("name") == "task" for call in (message.tool_calls or []))
@@ -107,8 +121,7 @@ class _TerminalSharingModel(FakeMessagesListChatModel):
                 "args": {"action": "start", "command": "printf 'SHARED_READY\\n'; sleep 1; printf 'SHARED_DONE\\n'",
                          "use_pty": False},
             }])
-        elif isinstance(latest, ToolMessage) and not delegated and '"session_id"' in cls._text(latest) \
-                and "SHARED_READY" in cls._text(latest):
+        elif not delegated and "SHARED_READY" in terminal_output:
             session_id = cls._session_id(messages)
             response = AIMessage(content="", tool_calls=[{
                 "id": "delegate-read", "name": "task",
@@ -116,7 +129,8 @@ class _TerminalSharingModel(FakeMessagesListChatModel):
                     {"session_id": session_id, "actions": ["read"]},
                 ]},
             }])
-        elif isinstance(latest, ToolMessage) and delegated and "SHARED_DONE" in cls._text(latest):
+        elif delegated and "SHARED_DONE" in terminal_output \
+                and latest_terminal.get("status") == "exited" and latest_terminal.get("exit_code") == 0:
             response = AIMessage(content=json.dumps({
                 "status": "completed", "terminal_output": "SHARED_READY\nSHARED_DONE\n",
                 "terminal_exit_code": 0, "completed": ["terminal"], "unresolved": [],
@@ -131,6 +145,41 @@ class _TerminalSharingModel(FakeMessagesListChatModel):
                          "since_seq": since_seq, "since_offset": since_offset},
             }])
         return ChatResult(generations=[ChatGeneration(message=response)])
+
+
+@pytest.mark.parametrize(("status", "exit_code"), [("running", None), ("exited", 0)])
+def test_terminal_script_requires_exit_receipt_after_final_output(status, exit_code):
+    """读到最后一段输出时进程可能仍在退出，脚本只能在退出回执到达后报告完成。"""
+    messages = [
+        AIMessage(content="", tool_calls=[{"id": "delegate-read", "name": "task", "args": {}}]),
+        ToolMessage(content="子代理已读取。", tool_call_id="delegate-read", name="task"),
+        ToolMessage(content=json.dumps({
+            "session_id": "term-test", "output": "SHARED_READY\nSHARED_DONE\n",
+            "status": status, "exit_code": exit_code, "output_until_seq": 2, "output_until_offset": 0,
+        }), tool_call_id="parent-wait", name="execute_command"),
+    ]
+    response = _TerminalSharingModel(responses=[]).invoke(messages)
+
+    if status == "running":
+        assert response.tool_calls[0]["args"] == {
+            "action": "wait", "session_id": "term-test", "timeout_ms": 5000, "since_seq": 2, "since_offset": 0,
+        }
+    else:
+        assert response.tool_calls == []
+        assert json.loads(response.content)["status"] == "completed"
+
+
+def test_terminal_script_does_not_treat_echoed_command_as_output():
+    """启动回执中的命令文本不是输出证据，尚未读到 READY 时不能委派子代理。"""
+    response = _TerminalSharingModel(responses=[]).invoke([
+        ToolMessage(content=json.dumps({
+            "session_id": "term-test", "command": "printf 'SHARED_READY\\n'; printf 'SHARED_DONE\\n'",
+            "output": "", "status": "running", "exit_code": None,
+        }), tool_call_id="parent-start", name="execute_command"),
+    ])
+
+    assert response.tool_calls[0]["name"] == "execute_command"
+    assert response.tool_calls[0]["args"]["action"] == "wait"
 
 
 def _call(name: str, arguments: dict[str, Any], identifier: str) -> AIMessage:
@@ -189,7 +238,21 @@ def _responses(world: EvaluationWorld) -> list[AIMessage]:
 
 
 @pytest.mark.asyncio
-async def test_steering_message_is_injected_at_a_real_tool_boundary(invocation_store):
+async def test_script_summary_does_not_consume_next_business_response():
+    """真实摘要调用应使用独立脚本响应，避免吞掉业务终态并循环重放。"""
+    final_response = AIMessage(content='{"status":"completed"}')
+    model = _ScriptModel(responses=[final_response])
+    summarizer = ContextPreservingSummarizationMiddleware(model)
+
+    summary = await summarizer.acreate_summary([HumanMessage(content="保留任务边界并继续执行。")])
+    assert summary.startswith("脚本摘要：")
+    assert await model.ainvoke("继续") == final_response
+    assert len(model.requests) == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("context_window", [128000, 256000])
+async def test_steering_message_is_injected_at_a_real_tool_boundary(invocation_store, context_window):
     """生产图应在首个分页回执后注入补充 HumanMessage，并继续完成原任务。"""
     world = EvaluationWorld("steering_long_context")
     model = _ScriptModel(responses=_responses(world))
@@ -198,7 +261,7 @@ async def test_steering_message_is_injected_at_a_real_tool_boundary(invocation_s
         world,
         model,
         model_name="scripted-steering-test",
-        context_window=128000,
+        context_window=context_window,
         max_iterations=48,
         invocation_repository=repository,
     )
@@ -211,15 +274,23 @@ async def test_steering_message_is_injected_at_a_real_tool_boundary(invocation_s
     )
     assert grade.passed, grade.violations
     assert [event["status"] for event in capture["steering_events"]] == ["queued", "applied"]
-    assert any(
-        message["type"] == "human"
-        and message["data"].get("additional_kwargs", {}).get("moviepilot_steering_message_id")
-        for message in capture["raw_messages"]
-    )
+    applied_ids = [
+        event["message_id"] for event in capture["steering_events"] if event["status"] == "applied"
+    ]
+    # 最终历史可能已压缩；实际模型请求必须在 page-1 回执后收到同一条补充消息。
+    injection_boundaries = {}
+    for request in model.requests:
+        latest_tool = next((message for message in reversed(request) if isinstance(message, ToolMessage)), None)
+        for message in request:
+            message_id = message.additional_kwargs.get("moviepilot_steering_message_id")
+            if isinstance(message, HumanMessage) and message_id and message_id not in injection_boundaries:
+                injection_boundaries[message_id] = latest_tool.tool_call_id if latest_tool is not None else None
+    assert list(injection_boundaries.items()) == [(applied_ids[0], "page-1")]
 
 
 @pytest.mark.asyncio
-async def test_multiple_steering_messages_preserve_each_model_boundary(invocation_store):
+@pytest.mark.parametrize("context_window", [128000, 256000])
+async def test_multiple_steering_messages_preserve_each_model_boundary(invocation_store, context_window):
     """连续补充消息应在各自业务回执后进入生产图，并保留提交顺序。"""
     world = EvaluationWorld("steering_multi_message")
     model = _ScriptModel(responses=_responses(world))
@@ -228,7 +299,7 @@ async def test_multiple_steering_messages_preserve_each_model_boundary(invocatio
         world,
         model,
         model_name="scripted-multi-steering-test",
-        context_window=128000,
+        context_window=context_window,
         max_iterations=64,
         invocation_repository=repository,
     )
@@ -246,13 +317,15 @@ async def test_multiple_steering_messages_preserve_each_model_boundary(invocatio
     applied_ids = [
         event["message_id"] for event in capture["steering_events"] if event["status"] == "applied"
     ]
-    context_ids = [
-        message["data"].get("additional_kwargs", {}).get("moviepilot_steering_message_id")
-        for message in capture["raw_messages"]
-        if message["type"] == "human"
-        and message["data"].get("additional_kwargs", {}).get("moviepilot_steering_message_id")
-    ]
-    assert context_ids == applied_ids
+    # 最终图状态允许压缩历史；从实际模型请求核验每条消息首次出现的工具回执边界。
+    injection_boundaries = {}
+    for request in model.requests:
+        latest_tool = next((message for message in reversed(request) if isinstance(message, ToolMessage)), None)
+        for message in request:
+            message_id = message.additional_kwargs.get("moviepilot_steering_message_id")
+            if isinstance(message, HumanMessage) and message_id and message_id not in injection_boundaries:
+                injection_boundaries[message_id] = latest_tool.tool_call_id if latest_tool is not None else None
+    assert list(injection_boundaries.items()) == [(applied_ids[0], "page-1"), (applied_ids[1], "page-3")]
 
 
 @pytest.fixture
@@ -487,9 +560,14 @@ async def test_production_agent_shares_parent_terminal_with_read_only_subagent(i
     assert grade.passed, grade.violations
     assert "execute_command" in capture["child_tool_names"]
     scoped_events = [event for event in world.ledger if event.get("scope")]
-    assert [event["scope"]["kind"] for event in scoped_events] == ["conversation", "subagent", "conversation"]
-    assert scoped_events[0]["scope"]["task_id"] == scoped_events[2]["scope"]["task_id"]
-    assert scoped_events[0]["scope"]["task_id"] != scoped_events[1]["scope"]["task_id"]
+    scopes = [event["scope"]["kind"] for event in scoped_events]
+    assert scopes[0] == scopes[-1] == "conversation"
+    assert scopes.count("subagent") == 1
+    assert set(scopes) == {"conversation", "subagent"}
+    parent_tasks = {event["scope"]["task_id"] for event in scoped_events if event["scope"]["kind"] == "conversation"}
+    child_tasks = {event["scope"]["task_id"] for event in scoped_events if event["scope"]["kind"] == "subagent"}
+    assert len(parent_tasks) == 1
+    assert parent_tasks.isdisjoint(child_tasks)
     assert {event["observations"][0]["record"]["session_id"] for event in scoped_events} == {
         scoped_events[0]["observations"][0]["record"]["session_id"]
     }

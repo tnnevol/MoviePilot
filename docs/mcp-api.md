@@ -500,7 +500,7 @@ FastAPI 的 HTTP 异常和参数校验异常统一使用 `message`，不再返�
 
 影视自动识别在未指定来源时只使用 TMDB，未命中时不会继续查询其它影视源。音乐路径识别严格按 AcoustID 音频指纹、文件标签、文件名三级依次执行；指纹或标签直接提供 MusicBrainz Recording ID 时，会直接查询 MusicBrainz 详情，未绑定身份的音乐标题及目录识别按 `SEARCH_SOURCE` 中内置音乐来源的配置顺序回退（MusicBrainz、TheAudioDB、豆瓣音乐），未选择音乐来源时兼容默认 MusicBrainz。显式 `media_source` / 主身份或 MusicBrainz 发行标签固定所属来源；来源之间不转换或拼接 ID。`MediaInfo` 响应仍可能包含 `tmdb_id`、`douban_id`、`bangumi_id`、`anilist_id` 等跨源映射辅助字段，但这些字段不是通用请求入口。明确归属 `/tmdb`、`/douban`、`/bangumi`、`/anilist` 的接口，以及固定使用 TMDB 的剧集组和排期接口，仍可按其单数据源契约接收原生 ID。
 
-整理目录的 `notify` 保持布尔类型；成功通知聚合统一由全局开关控制。开启 `TRANSFER_SUCCESS_NOTIFICATION_AGGREGATION`，明确批次完成后一次发送，外部无批次任务使用三十秒静默窗口。详见 [整理成功通知粒度](transfer-notifications.md)。
+整理目录的 `notify` 保持布尔类型；成功通知聚合统一由全局开关控制。开启 `TRANSFER_SUCCESS_NOTIFICATION_AGGREGATION`，整目录或手动整理的明确批次完成后一次发送；目录监控等自动单文件入口在批次结束后使用三十秒静默窗口，外部无批次任务同样按静默窗口合并。详见 [整理成功通知粒度](transfer-notifications.md)。
 
 | 方法 | 路径 | 说明 |
 | :--- | :--- | :--- |
@@ -830,6 +830,11 @@ AMLL 使用无需鉴权的原生搜索与获取接口，先尝试 ISRC，再核�
 下载地址与配置站点的协议、主机和端口必须一致，才补齐 Cookie 及缺失的 `site_ua`；显式凭据和代理选择保持原样。
 未匹配配置、配置有歧义或站点没有 Cookie 时沿用原有下载行为。磁力链和两段式换票下载保持原有凭据规则。
 
+音乐提交到下载器时优先使用已有媒体分类；分类为空时使用固定分类“音乐”，不把专辑类型
+（如 `Album`、`Single`）直接作为下载器分类，也不修改媒体库目录分类。qBittorrent 仍遵循
+MoviePilot 下载器配置中的自动管理开关：开启时传递分类并由 qBittorrent 分类规则决定保存位置；
+关闭时不传分类、显式关闭自动管理并使用指定的 `save_path`。已有下载任务不会自动重新分类或搬移。
+
 | 方法 | 路径 | 说明 |
 | :--- | :--- | :--- |
 | GET | `/api/v1/download/` | 查询正在下载的任务，参数：`name`；关联下载历史时返回媒体类型、来源站点 `site_name`，以及 `media.poster` 海报和 `media.backdrop` 背景图；兼容字段 `media.image` 与 `media.poster` 相同 |
@@ -1113,6 +1118,12 @@ Web Agent 直接调用 `moviepilot_api` 时，宿主会自动加载 `moviepilot-
 `download.list`、`download.update`、`download.delete`、`downloaders.list` 和
 `library.latest` 已从 Agent operation 目录删除，避免与 provider Skill 重复。供前端和
 其它宿主使用的普通 REST 端点仍然保留。
+
+`plugin.market` 对已安装且已绑定来源的插件，只把绑定仓库的更高版本列为更新。
+绑定仓库版本持平、较低或未返回候选时，其他仓库的高版本不会触发 `has_update`，
+也不会作为更新条目出现在 `state=market` 或 `state=all` 的市场部分。
+查看其他可选来源使用 `plugin.source.options`；切换来源仍须显式执行来源变更。
+尚未绑定来源的已安装插件保留市场候选，供用户选择绑定来源。
 
 #### Agent 自主定时任务与人格
 

@@ -1,6 +1,6 @@
 ---
 name: moviepilot-api
-version: 55
+version: 57
 description: >-
   Use this skill for MoviePilot product operations such as media search, torrent
   search, downloads, subscriptions, library checks, sites, storage, workflows,
@@ -106,6 +106,13 @@ For `subscription.update`, omit settings that should stay unchanged. Send JSON
 `null` to clear a supported optional setting; see [Subscription APIs](api/subscription.md)
 for the exact fields and the form empty-string compatibility rule.
 
+Music downloads keep an existing media category and otherwise use the Chinese
+music label as the downloader category, without changing library or metadata categories.
+qBittorrent still follows MoviePilot's configured automatic-management toggle:
+when enabled, its category rules control the save location; when disabled,
+MoviePilot omits the category and explicitly disables automatic management so
+the requested `save_path` applies. Existing tasks are not reclassified or moved.
+
 This file is intentionally kept as the routing and execution guide. Detailed
 operation contracts live in the linked category files under `api/`; load only
 the one category file needed for the selected operation. Do not load every
@@ -208,6 +215,12 @@ operation is added or moved, update its category file, this index, the
 frontmatter allowlist, and the matching gateway contract together.
 
 ## API Surface Scope
+
+For installed plugins with a bound source, `plugin.market` only lists an update
+when that repository has a newer version. A higher version in another repository
+does not trigger `has_update`. Use `plugin.source.options` to inspect alternative
+sources; switching sources still requires an explicit source change. Installed
+plugins without a bound source retain market candidates for source selection.
 
 Operations declare an identity scope: `public` reads external public metadata without requiring a channel account binding; `bound_user` uses the active MoviePilot user bound to the stable channel sender ID (Web uses its authenticated user ID); `admin` requires administrator authority. Read-only does not mean public. Channel nicknames never establish identity. Personal records and subscription writes retain their existing ownership and permission checks.
 
