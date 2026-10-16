@@ -1,4 +1,5 @@
 import time
+from collections.abc import Sequence
 from typing import Any, List, Optional, cast
 
 from sqlalchemy import delete as sqlalchemy_delete
@@ -341,7 +342,7 @@ class TransferHistoryOper(DbOper):
             lambda session: TransferHistory.list_by_hash(session, download_hash)
         )
 
-    def add(self, **kwargs):
+    def add(self, **kwargs: Any) -> None:
         """
         新增转移历史
         """
@@ -358,7 +359,7 @@ class TransferHistoryOper(DbOper):
             lambda session: TransferHistory.statistic(session, days)
         )
 
-    async def async_statistic(self, days: int = 7) -> List[Any]:
+    async def async_statistic(self, days: int = 7) -> Sequence[Any]:
         """异步统计最近若干天的整理历史数量。"""
         return await self._execute_async_query(
             lambda session: TransferHistory.async_statistic(session, days)
@@ -409,7 +410,7 @@ class TransferHistoryOper(DbOper):
             )
         )
 
-    def delete(self, historyid):
+    def delete(self, historyid: int) -> None:
         """
         删除旧转移记录，失败任务历史由状态机独占。
         """
@@ -424,6 +425,8 @@ class TransferHistoryOper(DbOper):
 
     def stage_delete(self, historyid: int) -> None:
         """暂存整理记录删除，事务由调用方统一提交。"""
+        if not isinstance(self._db, Session):
+            raise RuntimeError("整理历史事务删除需要调用方提供同步 Session")
         self._db.execute(
             sqlalchemy_delete(TransferHistory).where(
                 TransferHistory.id == historyid,
@@ -444,13 +447,15 @@ class TransferHistoryOper(DbOper):
 
     def stage_truncate(self) -> None:
         """暂存旧整理记录删除，只保留当前失败任务历史。"""
+        if not isinstance(self._db, Session):
+            raise RuntimeError("整理历史事务清理需要调用方提供同步 Session")
         self._db.execute(
             sqlalchemy_delete(TransferHistory).where(
                 TransferHistory.transfer_task_id.is_(None)
             )
         )
 
-    async def async_delete(self, historyid):
+    async def async_delete(self, historyid: int) -> None:
         """
         异步删除旧转移记录，失败任务历史由状态机独占。
         """
@@ -465,7 +470,7 @@ class TransferHistoryOper(DbOper):
 
         await self._execute_async_write(stage)
 
-    def truncate(self):
+    def truncate(self) -> None:
         """
         清空旧转移记录，只保留当前失败任务历史。
         """
@@ -477,7 +482,7 @@ class TransferHistoryOper(DbOper):
             )
         )
 
-    def stage_replace_by_src(self, **kwargs) -> TransferHistory:
+    def stage_replace_by_src(self, **kwargs: Any) -> TransferHistory:
         """在调用方事务内按源路径替换整理历史并返回已分配 ID 的新记录。"""
         if not isinstance(self._db, Session):
             raise RuntimeError("整理历史事务写入需要调用方提供同步 Session")
@@ -543,7 +548,7 @@ class TransferHistoryOper(DbOper):
             settlement_revision=settlement_revision,
         )
 
-    def update_download_hash(self, historyid, download_hash):
+    def update_download_hash(self, historyid: int, download_hash: str) -> None:
         """
         补充转移记录download_hash
         """

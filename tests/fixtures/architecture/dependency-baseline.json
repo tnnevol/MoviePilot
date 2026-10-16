@@ -941,8 +941,8 @@
       "runtime_only": true
     }
   },
-  "edge_count": 9561,
-  "edge_sha256": "33be79e78a558a10f4add55117460d34d0e763269d71711bc27b387fe2c5552d",
+  "edge_count": 9563,
+  "edge_sha256": "64ab9871d95e006af19070aa9b1690a6fd0b54d16cf4e8ad0ef2dc4870483940",
   "edges": [
     "app -> app.foundation",
     "app -> app.foundation.environment",
@@ -983,6 +983,8 @@
     "app.adapters.external.location -> app.adapters",
     "app.adapters.external.location -> app.adapters.network",
     "app.adapters.external.location -> app.adapters.network.http",
+    "app.adapters.external.location -> app.schemas",
+    "app.adapters.external.location -> app.schemas.common",
     "app.adapters.external.market -> app.adapters",
     "app.adapters.external.market -> app.adapters.external",
     "app.adapters.external.market -> app.adapters.external.plugin",
@@ -2580,6 +2582,7 @@
     "app.api.endpoints.mcp -> app.agent",
     "app.api.endpoints.mcp -> app.agent.tools",
     "app.api.endpoints.mcp -> app.agent.tools.manager",
+    "app.api.endpoints.mcp -> app.agent.tools.projection",
     "app.api.endpoints.mcp -> app.api",
     "app.api.endpoints.mcp -> app.api.response",
     "app.api.endpoints.mcp -> app.runtime",
@@ -6585,8 +6588,7 @@
     "app.db.oper.message -> app.db.models",
     "app.db.oper.message -> app.db.models.message",
     "app.db.oper.message -> app.schemas",
-    "app.db.oper.message -> app.schemas.message",
-    "app.db.oper.message -> app.schemas.notification",
+    "app.db.oper.message -> app.schemas.types",
     "app.db.oper.passkey -> app.db",
     "app.db.oper.passkey -> app.db.base",
     "app.db.oper.passkey -> app.db.models",
@@ -10506,7 +10508,7 @@
     "app.workflow.actions.transfer_file -> app.workflow",
     "app.workflow.actions.transfer_file -> app.workflow.actions"
   ],
-  "module_count": 1121,
+  "module_count": 1122,
   "modules": [
     "app",
     "app.adapters",
@@ -10694,6 +10696,7 @@
     "app.agent.tools.impl.view_image",
     "app.agent.tools.impl.write_file",
     "app.agent.tools.manager",
+    "app.agent.tools.projection",
     "app.agent.tools.result",
     "app.agent.tools.tags",
     "app.agent.web",
