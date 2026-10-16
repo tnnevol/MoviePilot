@@ -51,6 +51,10 @@ Fake-IP 等非公网解析地址需要通过 `IMAGE_PROXY_ALLOWED_PRIVATE_RANGES
 ### 端点
 **POST** `/api/v1/mcp`
 
+请求体须为单个 JSON-RPC 2.0 对象。非对象值（包括数组批量请求）或错误的协议版本返回
+HTTP 400、JSON-RPC 错误码 `-32600`；非对象请求的 `id` 为 `null`。无法解析的 JSON 返回
+HTTP 400、错误码 `-32700`。
+
 ### 支持的方法
 - `initialize`: 初始化会话，协商协议版本和能力。
 - `notifications/initialized`: 客户端确认初始化完成。
@@ -650,7 +654,7 @@ CUE 和歌词通过 `file_role=companion` 与音频共享组；同目录不同�
 
 #### AniList 榜单 / 探索
 
-AniList 榜单、探索、详情、人物和推荐接口优先通过 `anilist-chinese` 代理查询。代理不可用时自动回退 AniList 官方 GraphQL，并合并 `anilist-chinese` 每日数据集；媒体标题优先使用项目提供的中文标题，未提供中文标题时回退 AniList 原语言标题。
+AniList 榜单、探索、详情、人物和推荐接口优先通过 `anilist-chinese` 代理查询。代理不可用时自动回退 AniList 官方 GraphQL，并合并 `anilist-chinese` 每日数据集；媒体标题优先使用项目提供的中文标题，未提供中文标题时回退 AniList 原语言标题。代理返回非对象 JSON、非对象 `data` 或 GraphQL 错误时，也按代理不可用处理；合法空 `data` 对象仍保留原有空结果语义。
 
 | 方法 | 路径 | 说明 |
 | :--- | :--- | :--- |

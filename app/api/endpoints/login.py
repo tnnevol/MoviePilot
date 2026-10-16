@@ -33,7 +33,7 @@ router = ResponseAPIRouter()
 _INITIALIZATION_LOCK = asyncio.Lock()
 
 
-@router.get(  # type: ignore[misc]
+@router.get(
     "/initialization",
     summary="查询首次初始化状态",
     response_model=_SchemaResponse[_SchemaInitializationStatus],
@@ -59,7 +59,7 @@ async def get_initialization_status(
     )
 
 
-@router.post(  # type: ignore[misc]
+@router.post(
     "/initialization",
     summary="完成首次初始化",
     response_model=_SchemaResponse[None],
@@ -180,11 +180,12 @@ def login_access_token(
             detail="登录尝试过于频繁，请稍后重试",
             headers={"Retry-After": str(retry_after)},
         )
-    success, user_or_message = UserChain().user_authenticate(
+    auth_result = UserChain().user_authenticate(
         username=form_data.username, password=form_data.password, mfa_code=otp_password
     )
 
-    if not success:
+    if not auth_result[0]:
+        user_or_message = auth_result[1]
         # 只有密码已经验证通过时才返回 MFA 方法，避免泄露账号安全配置；密码正确不计失败。
         if isinstance(user_or_message, MfaRequired):
             challenge = _SchemaResponse[_SchemaMfaChallenge](
@@ -202,13 +203,14 @@ def login_access_token(
         throttle.record_failure(throttle_key)
         raise HTTPException(status_code=401, detail="用户名或密码错误")
 
+    user = auth_result[1]
     throttle.record_success(throttle_key)
     # 用户等级
     level = SitesHelper().auth_level
     access_token = create_access_token(
-        userid=user_or_message.id,
-        username=user_or_message.name,
-        super_user=user_or_message.is_superuser,
+        userid=user.id,
+        username=user.name,
+        super_user=user.is_superuser,
         expires_delta=timedelta(minutes=runtime_config.access_token_expire_minutes),
         level=level,
     )
@@ -216,9 +218,9 @@ def login_access_token(
         request,
         response,
         _SchemaTokenPayload(
-            sub=user_or_message.id,
-            username=user_or_message.name,
-            super_user=user_or_message.is_superuser,
+            sub=user.id,
+            username=user.name,
+            super_user=user.is_superuser,
             level=level,
             purpose="authentication",
         ),
@@ -227,12 +229,12 @@ def login_access_token(
     return _SchemaToken(
         access_token=access_token,
         token_type="bearer",
-        super_user=user_or_message.is_superuser,
-        user_id=user_or_message.id,
-        user_name=user_or_message.name,
-        avatar=user_or_message.avatar,
+        super_user=user.is_superuser,
+        user_id=user.id,
+        user_name=user.name,
+        avatar=user.avatar,
         level=level,
-        permissions=user_or_message.permissions or {},
+        permissions=user.permissions or {},
     )
 
 
