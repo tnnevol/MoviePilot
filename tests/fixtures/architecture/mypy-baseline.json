@@ -48,9 +48,6 @@
     "union-attr": 5,
     "var-annotated": 2
   },
-  "app/adapters/network/cloudflare.py": {
-    "no-untyped-def": 1
-  },
   "app/adapters/network/doh.py": {
     "assignment": 1,
     "no-any-return": 1,
@@ -107,9 +104,6 @@
   "app/adapters/system/stdio.py": {
     "override": 1
   },
-  "app/adapters/web/correlation.py": {
-    "type-arg": 2
-  },
   "app/adapters/web/metrics.py": {
     "no-any-return": 1,
     "type-arg": 3,
@@ -121,9 +115,6 @@
   "app/agent/callback/__init__.py": {
     "no-untyped-call": 3,
     "no-untyped-def": 8,
-    "type-arg": 1
-  },
-  "app/agent/contracts.py": {
     "type-arg": 1
   },
   "app/agent/llm/capability.py": {
@@ -1253,7 +1244,7 @@
     "arg-type": 2,
     "assignment": 2,
     "attr-defined": 1,
-    "no-untyped-call": 11,
+    "no-untyped-call": 4,
     "no-untyped-def": 1,
     "type-arg": 2
   },
@@ -1287,14 +1278,6 @@
     "arg-type": 1,
     "no-untyped-def": 2,
     "return-value": 1,
-    "type-arg": 1
-  },
-  "app/domain/title.py": {
-    "assignment": 1
-  },
-  "app/domain/tokens.py": {
-    "no-untyped-call": 2,
-    "no-untyped-def": 6,
     "type-arg": 1
   },
   "app/factory.py": {
@@ -1339,9 +1322,6 @@
     "return-value": 1,
     "type-arg": 5,
     "union-attr": 1
-  },
-  "app/foundation/url.py": {
-    "type-arg": 1
   },
   "app/main.py": {
     "misc": 1,
@@ -1505,7 +1485,7 @@
     "empty-body": 1,
     "no-any-return": 2,
     "no-untyped-call": 1,
-    "no-untyped-def": 5,
+    "no-untyped-def": 4,
     "type-arg": 3,
     "var-annotated": 3
   },
@@ -1929,13 +1909,12 @@
     "no-redef": 2,
     "operator": 1,
     "str-bytes-safe": 2,
-    "type-arg": 8,
-    "var-annotated": 1
+    "type-arg": 8
   },
   "app/modules/qbittorrent/qbittorrent.py": {
     "assignment": 10,
     "no-any-return": 3,
-    "no-untyped-def": 6,
+    "no-untyped-def": 5,
     "return-value": 1,
     "type-arg": 22
   },
