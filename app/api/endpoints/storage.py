@@ -29,12 +29,12 @@ from app.foundation import text as text_tools
 from app.runtime.localization import LocaleHelper
 from app.runtime.progress import ProgressHelper
 from app.schemas.common import ManageRequest as _SchemaManageRequest
+from app.schemas.file import FileItem as _SchemaFileItem
 from app.schemas.response import Response as _SchemaResponse
 from app.schemas.storage import StorageCatalogOption as _SchemaStorageCatalogOption
 from app.schemas.storage import StorageOption as _SchemaStorageOption
 from app.schemas.system import TransferDirectoryConf as _SchemaTransferDirectoryConf
 from app.schemas.types import ProgressKey, StorageSchema
-from app.schemas.workflow import FileItem as _SchemaFileItem
 
 router = ResponseAPIRouter()
 
@@ -348,7 +348,7 @@ def rename(
             runtime_config.media_extensions + runtime_config.subtitle_extensions + runtime_config.audio_extensions
         )
         # 递归修改目录内文件（智能识别命名）
-        sub_files: List[_SchemaFileItem] = StorageChain().list_files(fileitem)
+        sub_files: List[_SchemaFileItem] = StorageChain().list_files(fileitem) or []
         if sub_files:
             # 开始进度
             progress = ProgressHelper(ProgressKey.BatchRename)

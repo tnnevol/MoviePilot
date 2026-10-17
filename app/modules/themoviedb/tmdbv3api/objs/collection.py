@@ -1,4 +1,6 @@
-from ..tmdb import TMDb
+from typing import cast
+
+from ..tmdb import TMDb, TMDbJson
 
 
 class Collection(TMDb):
@@ -8,15 +10,18 @@ class Collection(TMDb):
         "translations": "/collection/%s/translations"
     }
 
-    def details(self, collection_id):
+    def details(self, collection_id: int | str) -> list[dict[str, TMDbJson]]:
         """
         Get collection details by id.
         :param collection_id: int
         :return:
         """
-        return self._request_obj(self._urls["details"] % collection_id, key="parts")
+        return cast(
+            list[dict[str, TMDbJson]],
+            self._request_obj(self._urls["details"] % collection_id, key="parts"),
+        )
 
-    def images(self, collection_id):
+    def images(self, collection_id: int | str) -> TMDbJson:
         """
         Get the images for a collection by id.
         :param collection_id: int
@@ -24,7 +29,7 @@ class Collection(TMDb):
         """
         return self._request_obj(self._urls["images"] % collection_id)
 
-    def translations(self, collection_id):
+    def translations(self, collection_id: int | str) -> TMDbJson:
         """
         Get the list translations for a collection by id.
         :param collection_id: int
@@ -33,15 +38,24 @@ class Collection(TMDb):
         return self._request_obj(self._urls["translations"] % collection_id, key="translations")
 
     # 异步版本方法
-    async def async_details(self, collection_id):
+    async def async_details(
+        self,
+        collection_id: int | str,
+    ) -> list[dict[str, TMDbJson]]:
         """
         Get collection details by id.（异步版本）
         :param collection_id: int
         :return:
         """
-        return await self._async_request_obj(self._urls["details"] % collection_id, key="parts")
+        return cast(
+            list[dict[str, TMDbJson]],
+            await self._async_request_obj(
+                self._urls["details"] % collection_id,
+                key="parts",
+            ),
+        )
 
-    async def async_images(self, collection_id):
+    async def async_images(self, collection_id: int | str) -> TMDbJson:
         """
         Get the images for a collection by id.（异步版本）
         :param collection_id: int
@@ -49,7 +63,7 @@ class Collection(TMDb):
         """
         return await self._async_request_obj(self._urls["images"] % collection_id)
 
-    async def async_translations(self, collection_id):
+    async def async_translations(self, collection_id: int | str) -> TMDbJson:
         """
         Get the list translations for a collection by id.（异步版本）
         :param collection_id: int

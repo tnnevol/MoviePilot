@@ -19,7 +19,7 @@
 | RES-002 | `DELIVERED`（R2） | 复杂度门禁漏扫私有方法、类/文件和 Scheduler；原生并发清单不完整 | `f7ca7e517`、`5cd5780d3`：完整宿主 AST、canonical owner/count、低水位与零增长门禁已落地 |
 | RES-003 | `DELIVERED`（R3） | Outbox after_commit 失败只有内存 pending 标记，重启不可恢复 | `9d06f91bb`：持久 intent、唯一 handler、claim/fencing、重启回放、幂等和失败观测完整闭环 |
 | RES-004 | `DELIVERED`（R4） | Startup initializer 与插件市场存在多套 Transport/Adapter/Manager 构造 | `7f5b8b469` 至 `046b0b305`：构造回收到 composition，兼容门面消费同一 owner，canonical 无重复正式实现 |
-| RES-005 | `DELIVERED`（R5） | 审计声明、机器门禁、CI 与远端交付状态需要重新校准 | 当前文档、固定 80% 覆盖率门禁与规则一致；Pylint `10.00/10`、架构/兼容、真实启动和最终 exact-head GitHub CI 闭环，远端 `0/0` |
+| RES-005 | `DELIVERED`（R5） | 审计声明、机器门禁、CI 与远端交付状态需要重新校准 | 当前文档、全 app 逐文件覆盖率低水位门禁与规则一致；Pylint `10.00/10`、架构/兼容、真实启动和最终 exact-head GitHub CI 闭环，远端 `0/0` |
 R2 原复杂度 v1/v2 实际使用源码行跨度，只覆盖 API、Application、Chain 和 Scheduler，
 且未强制固化下降后的低水位。2026-09-30 门禁调整将其替换为全宿主函数的 C901 圈复杂度
 （15）与 PLR1702 嵌套深度（5），源码尺寸降为观察报告；增长禁止写入，下降必须固化。
@@ -30,7 +30,7 @@ R2 原复杂度 v1/v2 实际使用源码行跨度，只覆盖 API、Application�
 `_parse_user_torrent_seeding_info` 的 C901 从 16 降至阈值 15 以内，基线仅移除此超限项。
 `concurrency.py` 扫描完整宿主源码，按 canonical import/alias、TaskGroup、可证明的
 loop/executor 来源和词法 owner 聚合数量。新增 owner、数量增长以及静态质量事实下降后
-未刷新低水位都会阻断 CI；覆盖率只要求 Application 与 Domain 达到固定 80%。
+未刷新低水位都会阻断 CI；覆盖率覆盖除 `app/plugins` 外全部 `app` 文件，存量低水位只增不减，新文件至少 80%。
 
 ## 1. 结论摘要
 
@@ -100,17 +100,17 @@ ARCH-201 至 ARCH-204 均达到实现、验证、提交、推送和远端门禁�
 
 | 指标 | 当前值 | 解释 |
 |---|---:|---|
-| 宿主 Python 模块 / 内部依赖边 | 1122 / 9,574 | `dependency-baseline.json` 当前快照；监控分发器直接导入 FileItem owner，以 1 条 Schema 依赖边替换间接导出依赖，模块数、边数、SCC 与边界不变；工作流扫描、整理与下载动作直接复用已有 Schema owner，新增 3 条合法依赖边，模块数、SCC 与边界不变；工作流媒体过滤与下载查询复用已有 Schema 元素类型，新增 2 条合法依赖边，模块数、SCC 与边界不变；TheAudioDB 相关艺术家结果复用既有领域类型，新增 2 条合法 Chain 到 Domain 类型依赖边（含父包展开），模块数、SCC 与边界不变；群晖 Chat 渠道类型改为直接导入已有 Schema owner，移除 1 条间接导出依赖边，模块数、SCC 与边界不变；系统链、转移规划、订阅查询和规则服务改为直接导入已有 Schema owner，新增 2 条 owner 依赖边并移除 4 条间接导出依赖边，模块数、SCC 与层间边界不变；Telegram Rich Message 失败降级复用 `app.schemas.exception` 的 `ImmediateException`，新增 2 条合法依赖边（含父包展开），未新增模块或 SCC。目录监控成功通知在批次完成后复用主事件循环开启静默窗口，新增 2 条合法 Chain 到 Runtime 依赖边（含父包展开），未新增模块或 SCC。成功通知聚合复用既有 owner 和领域模型，统一交由通知模板渲染；移除汇总发送端的模板上下文直连后，原聚合实现的 14 条新增依赖边减为 12 条，未新增模块或 SCC。社区勋章名单读取复用 `app.foundation.url` 标准化 GitHub 镜像地址，新增 2 条合法依赖边（含父包展开），未新增模块或 SCC。专辑订阅入库对账新增 1 个 Chain owner 和 18 条合法依赖边（含父包展开），仍经注入 Port 读取历史并通过既有 mutation 写入；订阅业务活动新增 4 个模块和 50 条合法内部依赖边（含父包展开），Application 仅定义事实与持久化 Port，DB Adapter/Oper 实现存取，组合根注入，未增加 Application/Chain 到具体 Adapter 或数据库的直连；插件实例校验复用 `app.domain.plugin` 的物理身份规则，兼容下划线 ID，新增 2 条合法依赖边（含父包展开）；种子失败冷却复用 `app.domain.torrent` 的限流语义，新增 1 条合法导入边；系统设置合同按 `app.application.settings` 包组织，系统设置 API 端点独立按 `app.api.endpoints.settings` 归档；消息音乐交互由 `app.chain.music_interaction` 包中的音乐解析/展示与订阅协调模块处理；已整理下载的站点字幕经 `app.chain.transfer` 自动整理队列完成命名与归档；网络连通性检测按 `app.application.nettest` 归档；工作流添加下载动作由 `app.workflow.actions.add_download` 转换工作流 Schema 为下载链领域上下文，新增 5 条合法模块导入边，资源过滤动作复用同一还原再新增 6 条；LLM 独占连接关闭复用宿主线程池；歌词字形转换复用 `app.foundation.text`；订阅创建使用 `app.domain.context.MediaInfo` 和运行时配置端口，将非 TMDB 影视身份投影为 TMDB 身份；本次安全与可靠性修复新增 4 条合法依赖边：WebAgent 复用渠道类型、宿主历史清理复用文件系统代理、两个下载器复用纯领域种子哈希规则，未新增模块或 SCC；IP 归属地适配器复用 `app.schemas.common.JsonData` 声明原始 JSON 返回，新增 2 条合法类型依赖边（含父包展开），未新增模块、循环或越层依赖；TMDb 认证与片单读取复用模块既有异常，新增 2 条同模块依赖边；Session 类型使扫描器识别原有两处 close，发送与会话关闭路径未变；Audiences 构造参数复用既有 RequestUtils 类型，新增 3 条合法依赖边（含父包展开），未新增模块或 SCC |
+| 宿主 Python 模块 / 内部依赖边 | 1122 / 9,578 | `dependency-baseline.json` 当前快照；站点 API 依赖显式导入 `SiteQueryPort` 与 `SiteStagingPort`，新增 1 条合法类型边；集数定位直接导入 FileItem owner，替换 1 条间接导出依赖边，模块数、边数、SCC 与边界不变；监控分发器直接导入 FileItem owner，以 1 条 Schema 依赖边替换间接导出依赖，模块数、边数、SCC 与边界不变；工作流扫描、整理与下载动作直接复用已有 Schema owner，新增 3 条合法依赖边，模块数、SCC 与边界不变；工作流媒体过滤与下载查询复用已有 Schema 元素类型，新增 2 条合法依赖边，模块数、SCC 与边界不变；TheAudioDB 相关艺术家结果复用既有领域类型，新增 2 条合法 Chain 到 Domain 类型依赖边（含父包展开），模块数、SCC 与边界不变；群晖 Chat 渠道类型改为直接导入已有 Schema owner，移除 1 条间接导出依赖边，模块数、SCC 与边界不变；系统链、转移规划、订阅查询和规则服务改为直接导入已有 Schema owner，新增 2 条 owner 依赖边并移除 4 条间接导出依赖边，模块数、SCC 与层间边界不变；Telegram Rich Message 失败降级复用 `app.schemas.exception` 的 `ImmediateException`，新增 2 条合法依赖边（含父包展开），未新增模块或 SCC。目录监控成功通知在批次完成后复用主事件循环开启静默窗口，新增 2 条合法 Chain 到 Runtime 依赖边（含父包展开），未新增模块或 SCC。成功通知聚合复用既有 owner 和领域模型，统一交由通知模板渲染；移除汇总发送端的模板上下文直连后，原聚合实现的 14 条新增依赖边减为 12 条，未新增模块或 SCC。社区勋章名单读取复用 `app.foundation.url` 标准化 GitHub 镜像地址，新增 2 条合法依赖边（含父包展开），未新增模块或 SCC。专辑订阅入库对账新增 1 个 Chain owner 和 18 条合法依赖边（含父包展开），仍经注入 Port 读取历史并通过既有 mutation 写入；订阅业务活动新增 4 个模块和 50 条合法内部依赖边（含父包展开），Application 仅定义事实与持久化 Port，DB Adapter/Oper 实现存取，组合根注入，未增加 Application/Chain 到具体 Adapter 或数据库的直连；插件实例校验复用 `app.domain.plugin` 的物理身份规则，兼容下划线 ID，新增 2 条合法依赖边（含父包展开）；种子失败冷却复用 `app.domain.torrent` 的限流语义，新增 1 条合法导入边；系统设置合同按 `app.application.settings` 包组织，系统设置 API 端点独立按 `app.api.endpoints.settings` 归档；消息音乐交互由 `app.chain.music_interaction` 包中的音乐解析/展示与订阅协调模块处理；已整理下载的站点字幕经 `app.chain.transfer` 自动整理队列完成命名与归档；网络连通性检测按 `app.application.nettest` 归档；工作流添加下载动作由 `app.workflow.actions.add_download` 转换工作流 Schema 为下载链领域上下文，新增 5 条合法模块导入边，资源过滤动作复用同一还原再新增 6 条；LLM 独占连接关闭复用宿主线程池；歌词字形转换复用 `app.foundation.text`；订阅创建使用 `app.domain.context.MediaInfo` 和运行时配置端口，将非 TMDB 影视身份投影为 TMDB 身份；本次安全与可靠性修复新增 4 条合法依赖边：WebAgent 复用渠道类型、宿主历史清理复用文件系统代理、两个下载器复用纯领域种子哈希规则，未新增模块或 SCC；IP 归属地适配器复用 `app.schemas.common.JsonData` 声明原始 JSON 返回，新增 2 条合法类型依赖边（含父包展开），未新增模块、循环或越层依赖；TMDb 认证与片单读取复用模块既有异常，新增 2 条同模块依赖边；Session 类型使扫描器识别原有两处 close，发送与会话关闭路径未变；Audiences 构造参数复用既有 RequestUtils 类型，新增 3 条合法依赖边（含父包展开）；插件实例历史脏行清理复用既有 `app.schemas.plugin.validate_plugin_id` 进行 fail-closed 身份校验，新增 2 条合法依赖边（含父包展开），未新增模块或 SCC |
 | 非平凡 SCC | 1 | 仅保留精确 containment 的 29 模块 TMDB 移植包环 |
 | 跨层 DB 边界债务 | 0 | Application、Chain、API、Agent、Runtime、Workflow 到 DB 的受控债务均为零 |
 | Model/Oper 事务债务 | 0 | 自建 Session、自动事务装饰器、直接 commit/rollback 等基线均为零 |
 | Module Contract | 215 specs / 211 methods / 263 calls | 动态方法名为 0；分类事实富化通过显式合同进入插件调度，旧 YAML 分类方法已移除；download 新增 custom_words 可选参数，旧 provider 签名通过显式合同兼容 |
 | Event Contract | 53 | 均已有 payload model，但当前全部是 diagnostic enforcement |
-| Python 源码量 | 373,455 行 | 本次重新扫描物理行数，排除 `app/plugins/**`；74 个文件超过 1,000 行，12 个超过 2,000 行；源码尺寸仅作观察 |
+| Python 源码量 | 373,625 行 | 本次重新扫描物理行数，排除 `app/plugins/**`；74 个文件超过 1,000 行，12 个超过 2,000 行；源码尺寸仅作观察 |
 | 长方法 | 309 个超过 80 行 | 本次 AST 扫描排除 `app/plugins/**`；61 个超过 150 行，17 个超过 250 行；新增函数仍受 C901/嵌套深度门禁约束 |
-| 全量 mypy 历史债务 | 6,192 / 317 文件 | 通知排版补齐 Slack 消息块类型，历史债务减少 2 项；工作流资源过滤改用领域对象调用过滤链，恢复的节点输出在消费前归一化，并收紧可空资源列表的类型低水位；消息媒体交互类型债务已清零，canonical Facade 与 endpoint 类型边界已补齐，低水位只允许继续下降；微信 ClawBot 入站 item_list 媒体解析改为按子项键名分派后，类型错误减少 4 项；站点解析器分享率改用浮点初值，类型错误减少 20 项；本次下载与文件安全修复再减少 3 项；Transmission 进度回退值归一化再减少 2 项，逐文件逐错误码无增长 |
-| Ruff 历史诊断 | 98 | 低水位门禁通过，但规则集只覆盖 `E4/E7/E9/F/I` |
-| 覆盖率固定基线 | Application 80.00%，Domain 80.00% | Chain、Runtime、Agent、Adapter、Startup 未进入包级覆盖率门禁 |
+| 全量 mypy 历史债务 | 5,916 / 276 文件 | 本轮在消息、站点、诊断、备份、用户配置、订阅、AcoustID、TMDB、仪表板和命令生命周期边界补齐类型，历史债务再减少 53 项；TMDB v3 API 显式导出并保留集合 parts 的列表合同，逐文件逐错误码无增长；此前工作流筛选、动态插件路由和 stdio 流补齐边界类型，历史债务减少 3 项；Bitpt 与 CookieCloud 补齐边界类型，历史债务减少 16 项；知行站点解析器补齐数值属性与基类合同，历史债务减少 18 项；通知排版补齐 Slack 消息块类型，历史债务减少 2 项；工作流资源过滤改用领域对象调用过滤链，恢复的节点输出在消费前归一化，并收紧可空资源列表的类型低水位；消息媒体交互类型债务已清零，canonical Facade 与 endpoint 类型边界已补齐，低水位只允许继续下降；微信 ClawBot 入站 item_list 媒体解析改为按子项键名分派后，类型错误减少 4 项；站点解析器分享率改用浮点初值，类型错误减少 20 项；本次下载与文件安全修复再减少 3 项；Transmission 进度回退值归一化再减少 2 项；本批清理 Servarr、认证、存储、订阅策略和搜索/规则/通知 Schema 的 18 项类型错误，并修复系统配置中的 Python 2 异常语法；本批再清理订阅元数据、订阅写入、交互宿主、整理路径、删除统计和工作流动作的 14 项类型错误，逐文件逐错误码无增长 |
+| Ruff 历史诊断 | 73 | 低水位门禁通过，但规则集只覆盖 `E4/E7/E9/F/I` |
+| 覆盖率逐文件低水位 | 全 app（排除 app/plugins）当前聚合 77.68% | 存量文件低水位只增不减，新文件至少 80% |
 
 外部 MCP schema 紧凑投影由纯函数模块 `app.agent.tools.projection` 拥有，仅在请求头显式 opt-in 后应用；新增 1 个模块和 1 条合法端点依赖边，未新增 SCC。`list_exposed_tools` 返回类型注解使端点类型债务减少 5 项。
 
@@ -673,7 +673,7 @@ Pylint 10/10、Ruff、mypy/复杂度 ratchet、宿主与最新官方插件基线
 
 - 复杂度脚本只检查 API、Application、Chain 的公共入口；私有长方法、类/文件规模和圈复杂度不受控。
 - strict mypy 仅 41 个文件，高风险 lifecycle、Scheduler、Agent、Plugin Manager 多数不在 frontier。
-- coverage ratchet 只聚合 Application 和 Domain。
+- coverage ratchet 已按文件覆盖除 `app/plugins` 外全部 `app`。
 - Task owner gate 尚未盘点原生并发原语；Event producer/consumer 已纳入统一事实源和人工 policy。
 - Ruff 仅是有限规则集的历史低水位，不代表整体风格/正确性无债务。
 
