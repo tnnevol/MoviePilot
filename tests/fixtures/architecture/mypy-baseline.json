@@ -806,18 +806,8 @@
     "truthy-function": 1,
     "type-arg": 8
   },
-  "app/modules/discord/discord.py": {
-    "assignment": 1,
-    "dict-item": 1,
-    "misc": 2,
-    "no-untyped-call": 2,
-    "no-untyped-def": 8,
-    "return-value": 2,
-    "type-arg": 14,
-    "union-attr": 18
-  },
   "app/modules/douban/__init__.py": {
-    "assignment": 24,
+    "assignment": 23,
     "empty-body": 1,
     "no-any-return": 1,
     "no-untyped-def": 7,
@@ -831,32 +821,12 @@
     "no-untyped-def": 1,
     "type-arg": 1
   },
-  "app/modules/emby/emby.py": {
-    "arg-type": 9,
-    "assignment": 2,
-    "dict-item": 1,
-    "no-any-return": 9,
-    "no-untyped-call": 2,
-    "no-untyped-def": 4,
-    "type-arg": 6,
-    "union-attr": 1,
-    "var-annotated": 3
-  },
   "app/modules/fanart/__init__.py": {
     "misc": 2,
     "no-any-return": 1,
     "no-untyped-def": 2,
     "type-arg": 9,
     "var-annotated": 1
-  },
-  "app/modules/feishu/feishu.py": {
-    "arg-type": 5,
-    "assignment": 1,
-    "call-overload": 1,
-    "no-untyped-def": 1,
-    "return-value": 1,
-    "type-arg": 22,
-    "union-attr": 2
   },
   "app/modules/feishu/module.py": {
     "assignment": 6,
@@ -1069,19 +1039,6 @@
     "no-untyped-def": 1,
     "type-arg": 1
   },
-  "app/modules/jellyfin/jellyfin.py": {
-    "arg-type": 7,
-    "assignment": 4,
-    "dict-item": 1,
-    "no-any-return": 11,
-    "no-untyped-call": 2,
-    "no-untyped-def": 5,
-    "operator": 4,
-    "return": 1,
-    "type-arg": 9,
-    "union-attr": 1,
-    "var-annotated": 3
-  },
   "app/modules/listenbrainz/__init__.py": {
     "misc": 2,
     "no-any-return": 2
@@ -1116,21 +1073,8 @@
     "arg-type": 7,
     "assignment": 16,
     "empty-body": 1,
-    "no-untyped-call": 1,
     "no-untyped-def": 5,
     "type-arg": 1
-  },
-  "app/modules/plex/plex.py": {
-    "arg-type": 2,
-    "assignment": 2,
-    "misc": 1,
-    "no-any-return": 1,
-    "no-untyped-def": 9,
-    "operator": 5,
-    "return-value": 1,
-    "type-arg": 3,
-    "union-attr": 4,
-    "var-annotated": 3
   },
   "app/modules/qqbot/gateway.py": {
     "no-untyped-def": 3,
@@ -1220,7 +1164,6 @@
     "index": 2,
     "no-any-return": 4,
     "no-untyped-def": 3,
-    "return-value": 1,
     "type-arg": 6
   },
   "app/modules/themoviedb/tmdbv3api/as_obj.py": {
@@ -1251,20 +1194,9 @@
     "arg-type": 3,
     "assignment": 1,
     "empty-body": 1,
-    "no-any-return": 3,
+    "no-any-return": 1,
     "no-untyped-def": 7,
     "type-arg": 2
-  },
-  "app/modules/ugreen/ugreen.py": {
-    "arg-type": 4,
-    "no-any-return": 1,
-    "no-untyped-call": 7,
-    "no-untyped-def": 9,
-    "operator": 2,
-    "type-arg": 12,
-    "type-var": 1,
-    "union-attr": 7,
-    "var-annotated": 2
   },
   "app/modules/vocechat/__init__.py": {
     "assignment": 6,
@@ -1329,17 +1261,6 @@
     "empty-body": 1,
     "no-untyped-def": 2,
     "type-arg": 1
-  },
-  "app/modules/zspace/zspace.py": {
-    "arg-type": 9,
-    "assignment": 3,
-    "no-any-return": 12,
-    "no-untyped-call": 2,
-    "no-untyped-def": 3,
-    "operator": 1,
-    "type-arg": 8,
-    "union-attr": 1,
-    "var-annotated": 4
   },
   "app/monitor/monitor.py": {
     "arg-type": 8,
